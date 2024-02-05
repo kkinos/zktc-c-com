@@ -24,21 +24,22 @@ pub struct Node {
 // AST node type
 #[derive(Debug, PartialEq, Clone)]
 pub enum NodeKind {
-    Add(Op),              // +
-    Sub(Op),              // -
-    Mul(Op),              // *
-    Div(Op),              // /
-    Not(Not),             // !
-    BitAnd(Op),           // &
-    BitOr(Op),            // |
-    BitXor(Op),           // ^
-    Eq(Op),               // ==
-    Ne(Op),               // !=
-    Lt(Op),               // <
-    Le(Op),               // <=
+    Add(Binary),          // +
+    Sub(Binary),          // -
+    Mul(Binary),          // *
+    Div(Binary),          // /
+    Not(Unary),           // !
+    BitNot(Unary),        // ~
+    BitAnd(Binary),       // &
+    BitOr(Binary),        // |
+    BitXor(Binary),       // ^
+    Eq(Binary),           // ==
+    Ne(Binary),           // !=
+    Lt(Binary),           // <
+    Le(Binary),           // <=
     LogAnd(Log),          // &&
     LogOr(Log),           // ||
-    Assign(Op),           // =
+    Assign(Binary),       // =
     Return(Return),       // return
     If(If),               // if
     While(While),         // while
@@ -48,10 +49,10 @@ pub enum NodeKind {
     Block(Block),         // {...}
     FuncCall(FuncCall),   // Functon call
     MemAccess(MemAccess), // . Struct member access
-    Addr(Addr),           // unary &
-    Deref(Deref),         // unary *
-    PtrAdd(PtrOp),        //
-    PtrSub(PtrOp),        //
+    Addr(Unary),          // unary &
+    Deref(Unary),         // unary *
+    PtrAdd(Binary),       //
+    PtrSub(Binary),       //
     Num(Num),             // Integer
     Var(Var),             // Variable
     Asm(Asm),             // Assembler
@@ -63,14 +64,17 @@ pub struct Num {
     pub val: u16,
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct Op {
+pub struct Binary {
     pub left: Box<Node>,
     pub right: Box<Node>,
 }
-
 #[derive(Debug, PartialEq, Clone)]
-pub struct Not {
+pub struct Unary {
     pub unary: Box<Node>,
+}
+#[derive(Debug, PartialEq, Clone)]
+pub struct Return {
+    pub expr: Box<Node>,
 }
 #[derive(Debug, PartialEq, Clone)]
 pub struct Log {
@@ -83,11 +87,6 @@ pub struct Var {
     pub name: String,
     pub offset: u16,
     pub is_global: bool,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Return {
-    pub expr: Box<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -146,7 +145,7 @@ pub struct Deref {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct PtrOp {
+pub struct PtrBinary {
     pub left: Box<Node>,
     pub right: Box<Node>,
 }
@@ -886,7 +885,7 @@ fn parse_declaration(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
             Ok((
                 i,
                 Node {
-                    kind: NodeKind::Assign(Op {
+                    kind: NodeKind::Assign(Binary {
                         left: Box::new(left),
                         right: Box::new(node),
                     }),
@@ -920,7 +919,7 @@ fn parse_assign(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
         let (i, right) = parse_assign(i)?;
         let ty = node.ty.clone();
         node = Node {
-            kind: NodeKind::Assign(Op {
+            kind: NodeKind::Assign(Binary {
                 left: Box::new(node),
                 right: Box::new(right),
             }),
@@ -1002,7 +1001,7 @@ fn parse_bitor(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 let (i, _) = multispace0(i)?;
                 let (i, right) = parse_bitxor(i)?;
                 node = Node {
-                    kind: NodeKind::BitOr(Op {
+                    kind: NodeKind::BitOr(Binary {
                         left: Box::new(node),
                         right: Box::new(right),
                     }),
@@ -1030,7 +1029,7 @@ fn parse_bitxor(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
             let (i, _) = multispace0(i)?;
             let (i, right) = parse_bitand(i)?;
             node = Node {
-                kind: NodeKind::BitXor(Op {
+                kind: NodeKind::BitXor(Binary {
                     left: Box::new(node),
                     right: Box::new(right),
                 }),
@@ -1055,7 +1054,7 @@ fn parse_bitand(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 let (i, _) = multispace0(i)?;
                 let (i, right) = parse_equality(i)?;
                 node = Node {
-                    kind: NodeKind::BitAnd(Op {
+                    kind: NodeKind::BitAnd(Binary {
                         left: Box::new(node),
                         right: Box::new(right),
                     }),
@@ -1085,7 +1084,7 @@ fn parse_equality(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
             let (i, right) = parse_relational(i)?;
             if s == "==" {
                 node = Node {
-                    kind: NodeKind::Eq(Op {
+                    kind: NodeKind::Eq(Binary {
                         left: Box::new(node),
                         right: Box::new(right),
                     }),
@@ -1093,7 +1092,7 @@ fn parse_equality(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 }
             } else {
                 node = Node {
-                    kind: NodeKind::Ne(Op {
+                    kind: NodeKind::Ne(Binary {
                         left: Box::new(node),
                         right: Box::new(right),
                     }),
@@ -1121,7 +1120,7 @@ fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
             match s {
                 "<" => {
                     node = Node {
-                        kind: NodeKind::Lt(Op {
+                        kind: NodeKind::Lt(Binary {
                             left: Box::new(node),
                             right: Box::new(right),
                         }),
@@ -1130,7 +1129,7 @@ fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 }
                 "<=" => {
                     node = Node {
-                        kind: NodeKind::Le(Op {
+                        kind: NodeKind::Le(Binary {
                             left: Box::new(node),
                             right: Box::new(right),
                         }),
@@ -1139,7 +1138,7 @@ fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 }
                 ">" => {
                     node = Node {
-                        kind: NodeKind::Lt(Op {
+                        kind: NodeKind::Lt(Binary {
                             left: Box::new(right),
                             right: Box::new(node),
                         }),
@@ -1148,7 +1147,7 @@ fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 }
                 ">=" => {
                     node = Node {
-                        kind: NodeKind::Le(Op {
+                        kind: NodeKind::Le(Binary {
                             left: Box::new(right),
                             right: Box::new(node),
                         }),
@@ -1187,7 +1186,7 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                             || right.ty.clone().unwrap().kind == TypeKind::Char)
                     {
                         node = Node {
-                            kind: NodeKind::Add(Op {
+                            kind: NodeKind::Add(Binary {
                                 left: Box::new(node),
                                 right: Box::new(right),
                             }),
@@ -1200,7 +1199,7 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                     {
                         let ty = node.ty.clone();
                         node = Node {
-                            kind: NodeKind::PtrAdd(PtrOp {
+                            kind: NodeKind::PtrAdd(Binary {
                                 left: Box::new(node),
                                 right: Box::new(right),
                             }),
@@ -1213,7 +1212,7 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                     {
                         let ty = right.ty.clone();
                         node = Node {
-                            kind: NodeKind::PtrAdd(PtrOp {
+                            kind: NodeKind::PtrAdd(Binary {
                                 left: Box::new(right),
                                 right: Box::new(node),
                             }),
@@ -1233,7 +1232,7 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                             || right.ty.clone().unwrap().kind == TypeKind::Char)
                     {
                         node = Node {
-                            kind: NodeKind::Sub(Op {
+                            kind: NodeKind::Sub(Binary {
                                 left: Box::new(node),
                                 right: Box::new(right),
                             }),
@@ -1245,7 +1244,7 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                     {
                         let ty = node.ty.clone();
                         node = Node {
-                            kind: NodeKind::PtrSub(PtrOp {
+                            kind: NodeKind::PtrSub(Binary {
                                 left: Box::new(node),
                                 right: Box::new(right),
                             }),
@@ -1266,7 +1265,7 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     }
 }
 
-// mul = unary ("*" unary | "/" unary | "!" unary)*
+// mul = unary ("*" unary | "/" unary)*
 fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     let (mut t, mut node) = parse_unary(text)?;
 
@@ -1279,7 +1278,7 @@ fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
             match s {
                 "*" => {
                     node = Node {
-                        kind: NodeKind::Mul(Op {
+                        kind: NodeKind::Mul(Binary {
                             left: Box::new(node),
                             right: Box::new(right),
                         }),
@@ -1288,7 +1287,7 @@ fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 }
                 "/" => {
                     node = Node {
-                        kind: NodeKind::Div(Op {
+                        kind: NodeKind::Div(Binary {
                             left: Box::new(node),
                             right: Box::new(right),
                         }),
@@ -1310,6 +1309,7 @@ fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
 //       | "*" unary
 //       | "&" unary
 //       | "!" unary
+//       | "~" unary
 //       | "sizeof" unary
 fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     let (i, s) = opt(alt((
@@ -1318,6 +1318,7 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
         tag("&"),
         tag("*"),
         tag("!"),
+        tag("~"),
         tag("sizeof"),
     )))(text)?;
 
@@ -1333,7 +1334,7 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 Ok((
                     i,
                     Node {
-                        kind: NodeKind::Sub(Op {
+                        kind: NodeKind::Sub(Binary {
                             left: Box::new(left),
                             right: Box::new(right),
                         }),
@@ -1347,7 +1348,7 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 Ok((
                     i,
                     Node {
-                        kind: NodeKind::Addr(Addr {
+                        kind: NodeKind::Addr(Unary {
                             unary: Box::new(unary),
                         }),
                         ty: Some(Box::new(Type {
@@ -1370,7 +1371,7 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                     Ok((
                         i,
                         Node {
-                            kind: NodeKind::Deref(Deref {
+                            kind: NodeKind::Deref(Unary {
                                 unary: Box::new(unary),
                             }),
                             ty: ty.unwrap().ptr_to,
@@ -1383,7 +1384,19 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 Ok((
                     i,
                     Node {
-                        kind: NodeKind::Not(Not {
+                        kind: NodeKind::Not(Unary {
+                            unary: Box::new(unary),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    },
+                ))
+            }
+            "~" => {
+                let (i, unary) = parse_unary(i)?;
+                Ok((
+                    i,
+                    Node {
+                        kind: NodeKind::BitNot(Unary {
                             unary: Box::new(unary),
                         }),
                         ty: Some(Box::new(create_int_type())),
@@ -1421,7 +1434,7 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                         let (i, right) = parse_expr(i)?;
                         let ty = node.clone().ty;
                         node = Node {
-                            kind: NodeKind::PtrAdd(PtrOp {
+                            kind: NodeKind::PtrAdd(Binary {
                                 left: Box::new(node),
                                 right: Box::new(right),
                             }),
@@ -1429,7 +1442,7 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                         };
                         let ty = node.clone().ty;
                         node = Node {
-                            kind: NodeKind::Deref(Deref {
+                            kind: NodeKind::Deref(Unary {
                                 unary: Box::new(node),
                             }),
                             ty: ty.unwrap().ptr_to,
@@ -1465,7 +1478,7 @@ fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                     "->" => {
                         let ty = node.clone().ty.unwrap();
                         node = Node {
-                            kind: NodeKind::Deref(Deref {
+                            kind: NodeKind::Deref(Unary {
                                 unary: Box::new(node),
                             }),
                             ty: ty.clone().ptr_to,
