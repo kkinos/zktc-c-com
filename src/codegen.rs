@@ -191,6 +191,15 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             writeln!(buf, "  mov a0, t0")?;
             writeln!(buf, "  push a0")?;
         }
+        NodeKind::Not(n) => {
+            gen(buf, &n.unary)?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  bnq a0, zero, 6")?;
+            writeln!(buf, "  addi a0, zero, 1")?;
+            writeln!(buf, "  jal zero, 4")?;
+            writeln!(buf, "  mov a0, zero")?;
+            writeln!(buf, "  push a0 ")?;
+        }
         NodeKind::BitAnd(n) => {
             gen(buf, &n.left)?;
             gen(buf, &n.right)?;

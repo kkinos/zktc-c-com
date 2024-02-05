@@ -28,6 +28,7 @@ pub enum NodeKind {
     Sub(Op),              // -
     Mul(Op),              // *
     Div(Op),              // /
+    Not(Not),             // !
     BitAnd(Op),           // &
     BitOr(Op),            // |
     BitXor(Op),           // ^
@@ -65,6 +66,11 @@ pub struct Num {
 pub struct Op {
     pub left: Box<Node>,
     pub right: Box<Node>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Not {
+    pub unary: Box<Node>,
 }
 #[derive(Debug, PartialEq, Clone)]
 pub struct Log {
@@ -1112,37 +1118,45 @@ fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
         if let Some(s) = s {
             let (i, _) = multispace0(i)?;
             let (i, right) = parse_add(i)?;
-            if s == "<" {
-                node = Node {
-                    kind: NodeKind::Lt(Op {
-                        left: Box::new(node),
-                        right: Box::new(right),
-                    }),
-                    ty: Some(Box::new(create_int_type())),
+            match s {
+                "<" => {
+                    node = Node {
+                        kind: NodeKind::Lt(Op {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
                 }
-            } else if s == "<=" {
-                node = Node {
-                    kind: NodeKind::Le(Op {
-                        left: Box::new(node),
-                        right: Box::new(right),
-                    }),
-                    ty: Some(Box::new(create_int_type())),
+                "<=" => {
+                    node = Node {
+                        kind: NodeKind::Le(Op {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
                 }
-            } else if s == ">" {
-                node = Node {
-                    kind: NodeKind::Lt(Op {
-                        left: Box::new(right),
-                        right: Box::new(node),
-                    }),
-                    ty: Some(Box::new(create_int_type())),
+                ">" => {
+                    node = Node {
+                        kind: NodeKind::Lt(Op {
+                            left: Box::new(right),
+                            right: Box::new(node),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
                 }
-            } else {
-                node = Node {
-                    kind: NodeKind::Le(Op {
-                        left: Box::new(right),
-                        right: Box::new(node),
-                    }),
-                    ty: Some(Box::new(create_int_type())),
+                ">=" => {
+                    node = Node {
+                        kind: NodeKind::Le(Op {
+                            left: Box::new(right),
+                            right: Box::new(node),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
+                }
+                _ => {
+                    unreachable!()
                 }
             }
             t = i;
@@ -1162,81 +1176,87 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
         if let Some(s) = s {
             let (i, _) = multispace0(i)?;
             let (i, right) = parse_mul(i)?;
-            if s == "+" {
-                if node.ty.is_none() || right.ty.is_none() {
-                    return context("Invalid operands", fail)(i);
+            match s {
+                "+" => {
+                    if node.ty.is_none() || right.ty.is_none() {
+                        return context("Invalid operands", fail)(i);
+                    }
+                    if (node.ty.clone().unwrap().kind == TypeKind::Int
+                        || node.ty.clone().unwrap().kind == TypeKind::Char)
+                        && (right.ty.clone().unwrap().kind == TypeKind::Int
+                            || right.ty.clone().unwrap().kind == TypeKind::Char)
+                    {
+                        node = Node {
+                            kind: NodeKind::Add(Op {
+                                left: Box::new(node),
+                                right: Box::new(right),
+                            }),
+                            ty: Some(Box::new(create_int_type())),
+                        }
+                    } else if (node.ty.clone().unwrap().kind == TypeKind::Pointer
+                        || node.ty.clone().unwrap().kind == TypeKind::Array)
+                        && (right.ty.clone().unwrap().kind == TypeKind::Int
+                            || right.ty.clone().unwrap().kind == TypeKind::Char)
+                    {
+                        let ty = node.ty.clone();
+                        node = Node {
+                            kind: NodeKind::PtrAdd(PtrOp {
+                                left: Box::new(node),
+                                right: Box::new(right),
+                            }),
+                            ty,
+                        }
+                    } else if (node.ty.clone().unwrap().kind == TypeKind::Int
+                        || node.ty.clone().unwrap().kind == TypeKind::Char)
+                        && (right.ty.clone().unwrap().kind == TypeKind::Pointer
+                            || right.ty.clone().unwrap().kind == TypeKind::Array)
+                    {
+                        let ty = right.ty.clone();
+                        node = Node {
+                            kind: NodeKind::PtrAdd(PtrOp {
+                                left: Box::new(right),
+                                right: Box::new(node),
+                            }),
+                            ty,
+                        }
+                    } else {
+                        return context("Invalid operands", fail)(i);
+                    }
                 }
-                if (node.ty.clone().unwrap().kind == TypeKind::Int
-                    || node.ty.clone().unwrap().kind == TypeKind::Char)
-                    && (right.ty.clone().unwrap().kind == TypeKind::Int
-                        || right.ty.clone().unwrap().kind == TypeKind::Char)
-                {
-                    node = Node {
-                        kind: NodeKind::Add(Op {
-                            left: Box::new(node),
-                            right: Box::new(right),
-                        }),
-                        ty: Some(Box::new(create_int_type())),
+                "-" => {
+                    if node.ty.is_none() || right.ty.is_none() {
+                        return context("Invalid operands", fail)(i);
                     }
-                } else if (node.ty.clone().unwrap().kind == TypeKind::Pointer
-                    || node.ty.clone().unwrap().kind == TypeKind::Array)
-                    && (right.ty.clone().unwrap().kind == TypeKind::Int
-                        || right.ty.clone().unwrap().kind == TypeKind::Char)
-                {
-                    let ty = node.ty.clone();
-                    node = Node {
-                        kind: NodeKind::PtrAdd(PtrOp {
-                            left: Box::new(node),
-                            right: Box::new(right),
-                        }),
-                        ty,
+                    if (node.ty.clone().unwrap().kind == TypeKind::Int
+                        || node.ty.clone().unwrap().kind == TypeKind::Char)
+                        && (right.ty.clone().unwrap().kind == TypeKind::Int
+                            || right.ty.clone().unwrap().kind == TypeKind::Char)
+                    {
+                        node = Node {
+                            kind: NodeKind::Sub(Op {
+                                left: Box::new(node),
+                                right: Box::new(right),
+                            }),
+                            ty: Some(Box::new(create_int_type())),
+                        }
+                    } else if node.ty.clone().unwrap().kind == TypeKind::Pointer
+                        && (right.ty.clone().unwrap().kind == TypeKind::Int
+                            || right.ty.clone().unwrap().kind == TypeKind::Char)
+                    {
+                        let ty = node.ty.clone();
+                        node = Node {
+                            kind: NodeKind::PtrSub(PtrOp {
+                                left: Box::new(node),
+                                right: Box::new(right),
+                            }),
+                            ty,
+                        }
+                    } else {
+                        return context("Invalid operands", fail)(i);
                     }
-                } else if (node.ty.clone().unwrap().kind == TypeKind::Int
-                    || node.ty.clone().unwrap().kind == TypeKind::Char)
-                    && (right.ty.clone().unwrap().kind == TypeKind::Pointer
-                        || right.ty.clone().unwrap().kind == TypeKind::Array)
-                {
-                    let ty = right.ty.clone();
-                    node = Node {
-                        kind: NodeKind::PtrAdd(PtrOp {
-                            left: Box::new(right),
-                            right: Box::new(node),
-                        }),
-                        ty,
-                    }
-                } else {
-                    return context("Invalid operands", fail)(i);
                 }
-            } else {
-                if node.ty.is_none() || right.ty.is_none() {
-                    return context("Invalid operands", fail)(i);
-                }
-                if (node.ty.clone().unwrap().kind == TypeKind::Int
-                    || node.ty.clone().unwrap().kind == TypeKind::Char)
-                    && (right.ty.clone().unwrap().kind == TypeKind::Int
-                        || right.ty.clone().unwrap().kind == TypeKind::Char)
-                {
-                    node = Node {
-                        kind: NodeKind::Sub(Op {
-                            left: Box::new(node),
-                            right: Box::new(right),
-                        }),
-                        ty: Some(Box::new(create_int_type())),
-                    }
-                } else if node.ty.clone().unwrap().kind == TypeKind::Pointer
-                    && (right.ty.clone().unwrap().kind == TypeKind::Int
-                        || right.ty.clone().unwrap().kind == TypeKind::Char)
-                {
-                    let ty = node.ty.clone();
-                    node = Node {
-                        kind: NodeKind::PtrSub(PtrOp {
-                            left: Box::new(node),
-                            right: Box::new(right),
-                        }),
-                        ty,
-                    }
-                } else {
-                    return context("Invalid operands", fail)(i);
+                _ => {
+                    unreachable!()
                 }
             }
             t = i;
@@ -1246,7 +1266,7 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     }
 }
 
-// mul = unary ("*" unary | "/" unary)*
+// mul = unary ("*" unary | "/" unary | "!" unary)*
 fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     let (mut t, mut node) = parse_unary(text)?;
 
@@ -1256,21 +1276,27 @@ fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
         if let Some(s) = s {
             let (i, _) = multispace0(i)?;
             let (i, right) = parse_unary(i)?;
-            if s == "*" {
-                node = Node {
-                    kind: NodeKind::Mul(Op {
-                        left: Box::new(node),
-                        right: Box::new(right),
-                    }),
-                    ty: Some(Box::new(create_int_type())),
+            match s {
+                "*" => {
+                    node = Node {
+                        kind: NodeKind::Mul(Op {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
                 }
-            } else {
-                node = Node {
-                    kind: NodeKind::Div(Op {
-                        left: Box::new(node),
-                        right: Box::new(right),
-                    }),
-                    ty: Some(Box::new(create_int_type())),
+                "/" => {
+                    node = Node {
+                        kind: NodeKind::Div(Op {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
+                }
+                _ => {
+                    unreachable!()
                 }
             }
             t = i;
@@ -1283,77 +1309,104 @@ fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
 // unary = ("+" | "-")? primary ("[" expr "]" | "." ident | "->" ident)*
 //       | "*" unary
 //       | "&" unary
+//       | "!" unary
 //       | "sizeof" unary
 fn parse_unary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
-    let (i, s) = opt(alt((tag("+"), tag("-"), tag("&"), tag("*"), tag("sizeof"))))(text)?;
+    let (i, s) = opt(alt((
+        tag("+"),
+        tag("-"),
+        tag("&"),
+        tag("*"),
+        tag("!"),
+        tag("sizeof"),
+    )))(text)?;
 
     if let Some(s) = s {
-        if s == "+" {
-            Ok(parse_primary(i)?)
-        } else if s == "-" {
-            let left = Node {
-                kind: NodeKind::Num(Num { val: 0 }),
-                ty: Some(Box::new(create_int_type())),
-            };
-            let (i, right) = parse_primary(i)?;
-            Ok((
-                i,
-                Node {
-                    kind: NodeKind::Sub(Op {
-                        left: Box::new(left),
-                        right: Box::new(right),
-                    }),
+        match s {
+            "+" => Ok(parse_primary(i)?),
+            "-" => {
+                let left = Node {
+                    kind: NodeKind::Num(Num { val: 0 }),
                     ty: Some(Box::new(create_int_type())),
-                },
-            ))
-        } else if s == "&" {
-            let (i, unary) = parse_unary(i)?;
-            let ty = unary.ty.clone();
-            Ok((
-                i,
-                Node {
-                    kind: NodeKind::Addr(Addr {
-                        unary: Box::new(unary),
-                    }),
-                    ty: Some(Box::new(Type {
-                        kind: TypeKind::Pointer,
-                        ptr_to: ty,
-                        size: 2,
-                        members: None,
-                    })),
-                },
-            ))
-        } else if s == "*" {
-            let (i, unary) = parse_unary(i)?;
-            if unary.ty.clone().unwrap().kind != TypeKind::Pointer
-                && unary.ty.clone().unwrap().kind != TypeKind::Array
-            {
-                context("Invalid pointer dereference", fail)(i)
-            } else {
+                };
+                let (i, right) = parse_primary(i)?;
+                Ok((
+                    i,
+                    Node {
+                        kind: NodeKind::Sub(Op {
+                            left: Box::new(left),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    },
+                ))
+            }
+            "&" => {
+                let (i, unary) = parse_unary(i)?;
                 let ty = unary.ty.clone();
                 Ok((
                     i,
                     Node {
-                        kind: NodeKind::Deref(Deref {
+                        kind: NodeKind::Addr(Addr {
                             unary: Box::new(unary),
                         }),
-                        ty: ty.unwrap().ptr_to,
+                        ty: Some(Box::new(Type {
+                            kind: TypeKind::Pointer,
+                            ptr_to: ty,
+                            size: 2,
+                            members: None,
+                        })),
                     },
                 ))
             }
-        } else {
-            let (i, _) = multispace0(i)?;
-            let (i, node) = parse_unary(i)?;
-            let ty = node.ty;
-            match ty {
-                Some(ty) => Ok((
+            "*" => {
+                let (i, unary) = parse_unary(i)?;
+                if unary.ty.clone().unwrap().kind != TypeKind::Pointer
+                    && unary.ty.clone().unwrap().kind != TypeKind::Array
+                {
+                    context("Invalid pointer dereference", fail)(i)
+                } else {
+                    let ty = unary.ty.clone();
+                    Ok((
+                        i,
+                        Node {
+                            kind: NodeKind::Deref(Deref {
+                                unary: Box::new(unary),
+                            }),
+                            ty: ty.unwrap().ptr_to,
+                        },
+                    ))
+                }
+            }
+            "!" => {
+                let (i, unary) = parse_unary(i)?;
+                Ok((
                     i,
                     Node {
-                        kind: NodeKind::Num(Num { val: ty.size }),
+                        kind: NodeKind::Not(Not {
+                            unary: Box::new(unary),
+                        }),
                         ty: Some(Box::new(create_int_type())),
                     },
-                )),
-                None => context("Unable to calculate", fail)(i),
+                ))
+            }
+            "sizeof" => {
+                let (i, _) = multispace0(i)?;
+                let (i, node) = parse_unary(i)?;
+                let ty = node.ty;
+                match ty {
+                    Some(ty) => Ok((
+                        i,
+                        Node {
+                            kind: NodeKind::Num(Num { val: ty.size }),
+                            ty: Some(Box::new(create_int_type())),
+                        },
+                    )),
+                    None => context("Unable to calculate", fail)(i),
+                }
+            }
+            _ => {
+                unreachable!()
             }
         }
     } else {
