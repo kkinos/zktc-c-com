@@ -311,6 +311,30 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             writeln!(buf, "  addi a0, zero, 1")?;
             writeln!(buf, "  push a0")?;
         }
+        NodeKind::Sll(n) => {
+            gen(buf, &n.left)?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a1")?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  sll a0, a1")?;
+            writeln!(buf, "  push a0")?;
+        }
+        NodeKind::Srl(n) => {
+            gen(buf, &n.left)?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a1")?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  srl a0, a1")?;
+            writeln!(buf, "  push a0")?;
+        }
+        NodeKind::Sra(n) => {
+            gen(buf, &n.left)?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a1")?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  sra a0, a1")?;
+            writeln!(buf, "  push a0")?;
+        }
         NodeKind::Return(n) => {
             gen(buf, &n.expr)?;
             writeln!(buf, "  pop a0")?;

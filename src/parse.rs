@@ -39,6 +39,9 @@ pub enum NodeKind {
     Le(Binary),           // <=
     LogAnd(Log),          // &&
     LogOr(Log),           // ||
+    Sll(Binary),          // <<
+    Srl(Binary),          // >>
+    Sra(Binary),          // >>>
     Assign(Binary),       // =
     Return(Return),       // return
     If(If),               // if
@@ -1106,9 +1109,9 @@ fn parse_equality(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     }
 }
 
-// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+// relational = shift ("<" shift | "<=" shift | ">" shift | ">=" shift)*
 fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
-    let (mut t, mut node) = parse_add(text)?;
+    let (mut t, mut node) = parse_shift(text)?;
 
     loop {
         let (i, _) = multispace0(t)?;
@@ -1116,7 +1119,7 @@ fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
 
         if let Some(s) = s {
             let (i, _) = multispace0(i)?;
-            let (i, right) = parse_add(i)?;
+            let (i, right) = parse_shift(i)?;
             match s {
                 "<" => {
                     node = Node {
@@ -1154,6 +1157,57 @@ fn parse_relational(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                         ty: Some(Box::new(create_int_type())),
                     }
                 }
+                _ => {
+                    unreachable!()
+                }
+            }
+            t = i;
+        } else {
+            return Ok((i, node));
+        }
+    }
+}
+
+// shift = add ("<<" add | ">>" add | ">>>" add)*
+fn parse_shift(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
+    let (mut t, mut node) = parse_add(text)?;
+
+    loop {
+        let (i, _) = multispace0(t)?;
+        let (i, s) = opt(alt((tag("<<"), tag(">>>"), tag(">>"))))(i)?;
+
+        if let Some(s) = s {
+            let (i, _) = multispace0(i)?;
+            let (i, right) = parse_shift(i)?;
+            match s {
+                "<<" => {
+                    node = Node {
+                        kind: NodeKind::Sll(Binary {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
+                }
+                ">>" => {
+                    node = Node {
+                        kind: NodeKind::Srl(Binary {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
+                }
+                ">>>" => {
+                    node = Node {
+                        kind: NodeKind::Sra(Binary {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
+                }
+
                 _ => {
                     unreachable!()
                 }
