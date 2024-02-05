@@ -17,3 +17,11 @@ zktc-asm asm/control_test2.asm -o mem/control_test2.mem -b 0x8000
 echo "=== control test2 ==="
 
 check mem/control_test2.mem
+
+cargo run -- zktc-c/assert.zktc.c zktc-c/control_test3.zktc.c -o asm/control_test3.asm
+zktc-asm asm/control_test3.asm -o mem/control_test3.mem -b 0x8000
+
+
+echo "=== control test3 ==="
+
+check mem/control_test3.mem

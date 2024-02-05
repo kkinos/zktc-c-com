@@ -42,7 +42,7 @@ fn main() -> Result<()> {
             Ok((_, (mut funcs, globals))) => {
                 program.funcs.append(&mut funcs);
                 program.globals = globals;
-                //  println!("{:?}", program);
+                // println!("{:?}", program);
             }
             Err(nom::Err::Error(e)) => {
                 return Err(anyhow!(

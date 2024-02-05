@@ -7,5 +7,9 @@ int main()
 	assert(10, 0xA, 4);
 	assert(48879, 0xbeef, 5);
 
+	assert(0, 0b0, 6);
+	assert(1, 0b1, 7);
+	assert(47, 0b101111, 8);
+
 	return 0;
 }

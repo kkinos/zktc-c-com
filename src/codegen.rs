@@ -191,6 +191,30 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             writeln!(buf, "  mov a0, t0")?;
             writeln!(buf, "  push a0")?;
         }
+        NodeKind::BitAnd(n) => {
+            gen(buf, &n.left)?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a1")?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  and a0, a1")?;
+            writeln!(buf, "  push a0")?;
+        }
+        NodeKind::BitOr(n) => {
+            gen(buf, &n.left)?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a1")?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  or a0, a1")?;
+            writeln!(buf, "  push a0")?;
+        }
+        NodeKind::BitXor(n) => {
+            gen(buf, &n.left)?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a1")?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  xor a0, a1")?;
+            writeln!(buf, "  push a0")?;
+        }
         NodeKind::Eq(n) => {
             gen(buf, &n.left)?;
             gen(buf, &n.right)?;
@@ -233,6 +257,40 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             writeln!(buf, "  bge a1, a0, 4")?;
             writeln!(buf, "  subi t0, t0, 1")?;
             writeln!(buf, "  mov a0, t0")?;
+            writeln!(buf, "  push a0")?;
+        }
+        NodeKind::LogAnd(n) => {
+            gen(buf, &n.left)?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  bnq a0, zero, 10")?;
+            writeln!(buf, "  lil a0, false{}@l", n.label)?;
+            writeln!(buf, "  lih a1, false{}@h", n.label)?;
+            writeln!(buf, "  or a0, a1")?;
+            writeln!(buf, "  jalr zero, a0, 0")?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  beq a0, zero, 6")?;
+            writeln!(buf, "  addi a0, zero, 1")?;
+            writeln!(buf, "  jal zero, 4")?;
+            writeln!(buf, "false{}:", n.label)?;
+            writeln!(buf, "  mov a0, zero")?;
+            writeln!(buf, "  push a0")?;
+        }
+        NodeKind::LogOr(n) => {
+            gen(buf, &n.left)?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  beq a0, zero, 10")?;
+            writeln!(buf, "  lil a0, true{}@l", n.label)?;
+            writeln!(buf, "  lih a1, true{}@h", n.label)?;
+            writeln!(buf, "  or a0, a1")?;
+            writeln!(buf, "  jalr zero, a0, 0")?;
+            gen(buf, &n.right)?;
+            writeln!(buf, "  pop a0")?;
+            writeln!(buf, "  bnq a0, zero, 6")?;
+            writeln!(buf, "  mov a0, zero")?;
+            writeln!(buf, "  jal zero, 4")?;
+            writeln!(buf, "true{}:", n.label)?;
+            writeln!(buf, "  addi a0, zero, 1")?;
             writeln!(buf, "  push a0")?;
         }
         NodeKind::Return(n) => {

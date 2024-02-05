@@ -28,10 +28,15 @@ pub enum NodeKind {
     Sub(Op),              // -
     Mul(Op),              // *
     Div(Op),              // /
+    BitAnd(Op),           // &
+    BitOr(Op),            // |
+    BitXor(Op),           // ^
     Eq(Op),               // ==
     Ne(Op),               // !=
     Lt(Op),               // <
     Le(Op),               // <=
+    LogAnd(Log),          // &&
+    LogOr(Log),           // ||
     Assign(Op),           // =
     Return(Return),       // return
     If(If),               // if
@@ -60,6 +65,12 @@ pub struct Num {
 pub struct Op {
     pub left: Box<Node>,
     pub right: Box<Node>,
+}
+#[derive(Debug, PartialEq, Clone)]
+pub struct Log {
+    pub left: Box<Node>,
+    pub right: Box<Node>,
+    pub label: u16,
 }
 #[derive(Debug, PartialEq, Clone)]
 pub struct Var {
@@ -893,9 +904,9 @@ fn parse_expr(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     parse_assign(text)
 }
 
-// assign = equality ("=" assign)?
+// assign = logor ("=" assign)?
 fn parse_assign(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
-    let (i, mut node) = parse_equality(text)?;
+    let (i, mut node) = parse_logor(text)?;
     let (i, _) = multispace0(i)?;
     let (i, s) = opt(tag("="))(i)?;
     if s.is_some() {
@@ -912,6 +923,146 @@ fn parse_assign(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
         Ok((i, node))
     } else {
         Ok((i, node))
+    }
+}
+
+// logor = logand ("||" logand)*
+fn parse_logor(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
+    let (mut t, mut node) = parse_logand(text)?;
+
+    loop {
+        let (i, _) = multispace0(t)?;
+        let (i, s) = opt(tag("||"))(i)?;
+        if s.is_some() {
+            let (i, _) = multispace0(i)?;
+            let (i, right) = parse_logand(i)?;
+            unsafe {
+                let label = CTR_LABEL_COUNT;
+                CTR_LABEL_COUNT += 1;
+                node = Node {
+                    kind: NodeKind::LogOr(Log {
+                        left: Box::new(node),
+                        right: Box::new(right),
+                        label,
+                    }),
+                    ty: Some(Box::new(create_int_type())),
+                };
+            }
+            t = i;
+        } else {
+            return Ok((i, node));
+        }
+    }
+}
+
+// logand = bitor ("&&" bitor)*
+fn parse_logand(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
+    let (mut t, mut node) = parse_bitor(text)?;
+
+    loop {
+        let (i, _) = multispace0(t)?;
+        let (i, s) = opt(tag("&&"))(i)?;
+        if s.is_some() {
+            let (i, _) = multispace0(i)?;
+            let (i, right) = parse_bitor(i)?;
+            unsafe {
+                let label = CTR_LABEL_COUNT;
+                CTR_LABEL_COUNT += 1;
+                node = Node {
+                    kind: NodeKind::LogAnd(Log {
+                        left: Box::new(node),
+                        right: Box::new(right),
+                        label,
+                    }),
+                    ty: Some(Box::new(create_int_type())),
+                };
+            }
+            t = i;
+        } else {
+            return Ok((i, node));
+        }
+    }
+}
+
+// bitor = bitxor ("|" bitxor)*
+fn parse_bitor(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
+    let (mut t, mut node) = parse_bitxor(text)?;
+
+    loop {
+        let (i, _) = multispace0(t)?;
+        let (i, s) = opt(alt((tag("||"), tag("|"))))(i)?;
+        if let Some(s) = s {
+            if s == "|" {
+                let (i, _) = multispace0(i)?;
+                let (i, right) = parse_bitxor(i)?;
+                node = Node {
+                    kind: NodeKind::BitOr(Op {
+                        left: Box::new(node),
+                        right: Box::new(right),
+                    }),
+                    ty: Some(Box::new(create_int_type())),
+                };
+                t = i;
+            } else {
+                // "||" is logor
+                return Ok((t, node));
+            }
+        } else {
+            return Ok((i, node));
+        }
+    }
+}
+
+// bitxor = bitand ("^" bitand)*
+fn parse_bitxor(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
+    let (mut t, mut node) = parse_bitand(text)?;
+
+    loop {
+        let (i, _) = multispace0(t)?;
+        let (i, s) = opt(tag("^"))(i)?;
+        if s.is_some() {
+            let (i, _) = multispace0(i)?;
+            let (i, right) = parse_bitand(i)?;
+            node = Node {
+                kind: NodeKind::BitXor(Op {
+                    left: Box::new(node),
+                    right: Box::new(right),
+                }),
+                ty: Some(Box::new(create_int_type())),
+            };
+            t = i;
+        } else {
+            return Ok((i, node));
+        }
+    }
+}
+
+// bitand = equality ("&" equality)*
+fn parse_bitand(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
+    let (mut t, mut node) = parse_equality(text)?;
+
+    loop {
+        let (i, _) = multispace0(t)?;
+        let (i, s) = opt(alt((tag("&&"), tag("&"))))(i)?;
+        if let Some(s) = s {
+            if s == "&" {
+                let (i, _) = multispace0(i)?;
+                let (i, right) = parse_equality(i)?;
+                node = Node {
+                    kind: NodeKind::BitAnd(Op {
+                        left: Box::new(node),
+                        right: Box::new(right),
+                    }),
+                    ty: Some(Box::new(create_int_type())),
+                };
+                t = i;
+            } else {
+                // "&&" is logand
+                return Ok((t, node));
+            }
+        } else {
+            return Ok((i, node));
+        }
     }
 }
 
@@ -1326,17 +1477,36 @@ fn parse_primary(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
 }
 
 fn parse_num(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
-    let (i, s) = opt(tag("0x"))(text)?;
-    if s.is_some() {
-        let (i, val) = hex_digit1(i)?;
-        let val: u16 = u16::from_str_radix(val, 16).unwrap();
-        Ok((
-            i,
-            Node {
-                kind: NodeKind::Num(Num { val }),
-                ty: Some(Box::new(create_int_type())),
-            },
-        ))
+    let (i, s) = opt(alt((tag("0x"), tag("0b"))))(text)?;
+    if let Some(s) = s {
+        match s {
+            "0x" => {
+                let (i, val) = hex_digit1(i)?;
+                let val: u16 = u16::from_str_radix(val, 16).unwrap();
+                Ok((
+                    i,
+                    Node {
+                        kind: NodeKind::Num(Num { val }),
+                        ty: Some(Box::new(create_int_type())),
+                    },
+                ))
+            }
+            "0b" => {
+                let (i, val) = many0(alt((tag("0"), tag("1"))))(i)?;
+                let val = val.concat();
+                let val: u16 = u16::from_str_radix(&val, 2).unwrap();
+                Ok((
+                    i,
+                    Node {
+                        kind: NodeKind::Num(Num { val }),
+                        ty: Some(Box::new(create_int_type())),
+                    },
+                ))
+            }
+            _ => {
+                unreachable!()
+            }
+        }
     } else {
         let (i, val) = digit1(text)?;
         let val: u16 = val.parse().unwrap();
