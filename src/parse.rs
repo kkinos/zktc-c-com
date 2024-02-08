@@ -250,11 +250,12 @@ fn is_ident(c: char) -> bool {
     is_alphanumeric(c as u8) || c == '_'
 }
 
-// declspec = "int" | "char" | struct-decl | "typedef" declspec ident | ident
+// declspec = "int" | "char" | "func" | struct-decl | "typedef" declspec ident | ident
 fn parse_declspec(text: &str) -> IResult<&str, Type, VerboseError<&str>> {
     let (i, type_kind) = opt(alt((
         tag("int"),
         tag("char"),
+        tag("func"),
         tag("struct"),
         tag("typedef"),
     )))(text)?;
@@ -263,6 +264,7 @@ fn parse_declspec(text: &str) -> IResult<&str, Type, VerboseError<&str>> {
         match type_kind {
             "int" => Ok((i, create_int_type())),
             "char" => Ok((i, create_char_type())),
+            "func" => Ok((i, create_func_type())),
             "struct" => {
                 let (i, _) = multispace0(i)?;
                 Ok(parse_struct_decl(i)?)
