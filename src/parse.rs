@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use nom::{
     branch::{alt, permutation},
     bytes::complete::{tag, take_until, take_while1},
     character::{
-        complete::{digit1, hex_digit1, multispace0, multispace1},
+        complete::{alphanumeric1, digit1, hex_digit1, multispace0, multispace1},
         is_alphanumeric,
     },
     combinator::{fail, opt},
@@ -207,6 +209,32 @@ pub enum ScopeKind {
     Tag,     // Struct tag
     Typedef, // Typedef
     Null,
+}
+
+// #define k v
+pub fn parse_define(
+    mut text: &str,
+    mut defines: HashMap<String, String>,
+) -> IResult<&str, (String, HashMap<String, String>), VerboseError<&str>> {
+    loop {
+        let (i, _) = parse_space_or_comment(text)?;
+        let (i, define) = opt(tag("#define"))(i)?;
+        if define.is_some() {
+            let (i, _) = multispace1(i)?;
+            let (i, k) = take_while1(is_ident)(i)?;
+            let (i, _) = multispace1(i)?;
+            let (i, v) = alphanumeric1(i)?;
+            defines.insert(k.to_string(), v.to_string());
+            text = i
+        } else {
+            break;
+        }
+    }
+    let mut res = text.to_string();
+    for (k, v) in &defines {
+        res = res.replace(k, v);
+    }
+    Ok((text, (res, defines)))
 }
 
 static mut GLOBALS: Vec<Scope> = Vec::new();
