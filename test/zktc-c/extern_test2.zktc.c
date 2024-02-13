@@ -20,5 +20,7 @@ int main()
 	assert(4, sizeof(w), 7);
 	assert(4, w.a + w.b, 8);
 
+	assert(3, M1, 9);
+
 	return 0;
 }

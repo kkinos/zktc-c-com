@@ -568,7 +568,7 @@ fn gen_lval(buf: &mut String, node: &Node) -> Result<()> {
             writeln!(buf, "  push a0")?;
         }
         _ => {
-            return Err(anyhow!("Left side value is not local value"));
+            return Err(anyhow!("Not lvalue"));
         }
     }
     Ok(())

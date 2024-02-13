@@ -46,6 +46,12 @@ int test6()
 	return x[1][2];
 }
 
+int test7()
+{
+
+	return 4;
+}
+
 int main()
 {
 	assert(0, test1(), 1);
@@ -54,6 +60,10 @@ int main()
 	assert(3, test4(), 4);
 	assert(4, test5(), 5);
 	assert(5, test6(), 6);
+
+	func *p;
+	p = &test7();
+	assert(4, *p, 7);
 
 	return 0;
 }

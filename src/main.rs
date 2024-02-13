@@ -15,7 +15,7 @@ mod ty;
 use clap::Parser;
 
 #[derive(Parser)]
-#[clap(version = "0.1", author = "kinpoko", about = "ZKTC C compiler")]
+#[clap(version = "0.1", author = "kinpoko", about = "ZKTC-C compiler")]
 struct Args {
     /// .zktc.c file path
     file_path: Vec<std::path::PathBuf>,

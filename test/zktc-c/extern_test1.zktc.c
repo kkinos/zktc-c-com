@@ -1,3 +1,5 @@
+#define M1 3
+
 int x;
 int y[10];
 

@@ -244,6 +244,33 @@ static mut STR_LABEL_COUNT: u16 = 0;
 static mut CTR_LABEL_COUNT: u16 = 0;
 static mut SCOPE_CTR_LABEL: u16 = 0;
 
+pub fn parse_program(
+    mut text: &str,
+    globals: Vec<Scope>,
+) -> IResult<&str, (Vec<Func>, Vec<Scope>), VerboseError<&str>> {
+    let mut funcs: Vec<Func> = Vec::new();
+    unsafe { GLOBALS = globals.clone() }
+    loop {
+        // remove space and comment
+        let (i, _) = parse_space_or_comment(text)?;
+        if i.is_empty() {
+            break;
+        }
+        let (i, global) = opt(parse_global)(i)?;
+        if let Some(global) = global {
+            unsafe {
+                GLOBALS.push(global);
+            }
+            text = i;
+        } else {
+            let (i, func) = parse_function(i)?;
+            funcs.push(func);
+            text = i;
+        }
+    }
+    Ok((text, (funcs, unsafe { GLOBALS.clone() })))
+}
+
 fn parse_space_or_comment(text: &str) -> IResult<&str, &str, VerboseError<&str>> {
     let (mut i, _) = multispace0(text)?;
     loop {
@@ -459,33 +486,6 @@ fn parse_declarator(text: &str, ty: Type) -> IResult<&str, (&str, Type), Verbose
     }
 
     Ok((i, (ident, ty)))
-}
-
-pub fn parse_program(
-    mut text: &str,
-    globals: Vec<Scope>,
-) -> IResult<&str, (Vec<Func>, Vec<Scope>), VerboseError<&str>> {
-    let mut funcs: Vec<Func> = Vec::new();
-    unsafe { GLOBALS = globals.clone() }
-    loop {
-        // remove space and comment
-        let (i, _) = parse_space_or_comment(text)?;
-        if i.is_empty() {
-            break;
-        }
-        let (i, global) = opt(parse_global)(i)?;
-        if let Some(global) = global {
-            unsafe {
-                GLOBALS.push(global);
-            }
-            text = i;
-        } else {
-            let (i, func) = parse_function(i)?;
-            funcs.push(func);
-            text = i;
-        }
-    }
-    Ok((text, (funcs, unsafe { GLOBALS.clone() })))
 }
 
 fn parse_global(text: &str) -> IResult<&str, Scope, VerboseError<&str>> {
