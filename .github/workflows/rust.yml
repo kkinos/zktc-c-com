@@ -19,8 +19,8 @@ jobs:
         run: cargo build --verbose
       - name: Test setup
         run: |
-          cargo install --git https://github.com/kinpoko/zktc-asm.git
-          cargo install --git https://github.com/kinpoko/zktc-emu.git
+          cargo install --git https://github.com/kkinos/zktc-asm.git
+          cargo install --git https://github.com/kkinos/zktc-emu.git
           sudo apt-get update
           sudo apt-get install expect
       - name: Run tests

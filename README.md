@@ -2,12 +2,12 @@
 
 zktc-c-com is a ZKTC-C compiler implemented in Rust.
 
-ZKTC-C is a C-like programming language for [ZKTC](https://github.com/kinpoko/zktc).
+ZKTC-C is a C-like programming language for [ZKTC](https://github.com/kkinos/zktc).
 
 # Install
 
 ```sh
-cargo install --git https://github.com/kinpoko/zktc-c-com.git
+cargo install --git https://github.com/kkinos/zktc-c-com.git
 ```
 
 # Usage
@@ -41,6 +41,6 @@ make test
 
 requirements
 
-- [zktc-asm](https://github.com/kinpoko/zktc-asm)
-- [zktc-emu](https://github.com/kinpoko/zktc-emu)
+- [zktc-asm](https://github.com/kkinos/zktc-asm)
+- [zktc-emu](https://github.com/kkinos/zktc-emu)
 - expect
