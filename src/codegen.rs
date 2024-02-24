@@ -484,9 +484,15 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             gen(buf, &n.right)?;
             writeln!(
                 buf,
-                "  addi a0, zero, {}",
+                "  lil a0, 0x{:04x}@l",
                 node.ty.clone().unwrap().ptr_to.unwrap().size
             )?;
+            writeln!(
+                buf,
+                "  lih a1, 0x{:04x}@h",
+                node.ty.clone().unwrap().ptr_to.unwrap().size
+            )?;
+            writeln!(buf, "  or a0, a1")?;
             writeln!(buf, "  push a0")?;
             writeln!(buf, "  pop a1")?;
             writeln!(buf, "  pop a0")?;
@@ -506,9 +512,15 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             gen(buf, &n.right)?;
             writeln!(
                 buf,
-                "  addi a0, zero, {}",
+                "  lil a0, 0x{:04x}@l",
                 node.ty.clone().unwrap().ptr_to.unwrap().size
             )?;
+            writeln!(
+                buf,
+                "  lih a1, 0x{:04x}@h",
+                node.ty.clone().unwrap().ptr_to.unwrap().size
+            )?;
+            writeln!(buf, "  or a0, a1")?;
             writeln!(buf, "  push a0")?;
             writeln!(buf, "  pop a1")?;
             writeln!(buf, "  pop a0")?;
