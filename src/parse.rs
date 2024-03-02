@@ -30,6 +30,7 @@ pub enum NodeKind {
     Sub(Binary),          // -
     Mul(Binary),          // *
     Div(Binary),          // /
+    Mod(Binary),          // /
     Not(Unary),           // !
     BitNot(Unary),        // ~
     BitAnd(Binary),       // &
@@ -1349,13 +1350,13 @@ fn parse_add(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     }
 }
 
-// mul = unary ("*" unary | "/" unary)*
+// mul = unary ("*" unary | "/" unary | "%" unary)*
 fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
     let (mut t, mut node) = parse_unary(text)?;
 
     loop {
         let (i, _) = multispace0(t)?;
-        let (i, s) = opt(alt((tag("*"), tag("/"))))(i)?;
+        let (i, s) = opt(alt((tag("*"), tag("/"), tag("%"))))(i)?;
         if let Some(s) = s {
             let (i, _) = multispace0(i)?;
             let (i, right) = parse_unary(i)?;
@@ -1372,6 +1373,15 @@ fn parse_mul(text: &str) -> IResult<&str, Node, VerboseError<&str>> {
                 "/" => {
                     node = Node {
                         kind: NodeKind::Div(Binary {
+                            left: Box::new(node),
+                            right: Box::new(right),
+                        }),
+                        ty: Some(Box::new(create_int_type())),
+                    }
+                }
+                "%" => {
+                    node = Node {
+                        kind: NodeKind::Mod(Binary {
                             left: Box::new(node),
                             right: Box::new(right),
                         }),

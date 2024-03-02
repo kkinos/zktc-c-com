@@ -7,6 +7,7 @@ int main()
 	assert(15, 5 * (9 - 6), 5);
 	assert(4, (3 + 5) / 2, 6);
 	assert(10, -10 + 20, 7);
+	assert(5, 17 % 6, 8);
 
 	return 0;
 }
