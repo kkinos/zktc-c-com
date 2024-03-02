@@ -9,7 +9,7 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
     let funcs = &program.funcs;
     let globals = &program.globals;
 
-    // Firstly, generate init function
+    // Generate init function
     let init_func = funcs.iter().find(|f| f.kind == FuncKind::Init);
     match init_func {
         Some(func) => {
@@ -48,7 +48,7 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
         }
     }
 
-    // Secondly, generate main functions
+    // Generate main functions
     let main_func = funcs.iter().find(|f| f.kind == FuncKind::Main);
     match main_func {
         Some(func) => {
@@ -82,7 +82,7 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
         }
     }
 
-    // Finally, generate other functions
+    // Generate other functions
     for func in funcs {
         if func.kind == FuncKind::Other {
             writeln!(buf, "{}:", func.name)?;
@@ -120,7 +120,7 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
         }
     }
 
-    // global variables are generated
+    // Generate global variables
     for global in globals {
         match global.kind {
             ScopeKind::Var => {
@@ -138,6 +138,10 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
             _ => {}
         }
     }
+
+    // Generate heap tag
+    writeln!(buf, "heap:")?;
+
     Ok(())
 }
 
