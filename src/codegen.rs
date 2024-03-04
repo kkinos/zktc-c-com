@@ -28,12 +28,8 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
             for node in &func.nodes {
                 match node.kind {
                     NodeKind::Null => {}
-                    NodeKind::Asm(_) => {
-                        gen(buf, node)?;
-                    }
                     _ => {
                         gen(buf, node)?;
-                        writeln!(buf, "  pop a0")?;
                     }
                 }
             }
@@ -67,12 +63,8 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
             for node in &func.nodes {
                 match node.kind {
                     NodeKind::Null => {}
-                    NodeKind::Asm(_) => {
-                        gen(buf, node)?;
-                    }
                     _ => {
                         gen(buf, node)?;
-                        writeln!(buf, "  pop a0")?;
                     }
                 }
             }
@@ -108,12 +100,8 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
             for node in &func.nodes {
                 match node.kind {
                     NodeKind::Null => {}
-                    NodeKind::Asm(_) => {
-                        gen(buf, node)?;
-                    }
                     _ => {
                         gen(buf, node)?;
-                        writeln!(buf, "  pop a0")?;
                     }
                 }
             }
@@ -399,8 +387,6 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             writeln!(buf, "else{}:", n.label)?;
             if let Some(n) = &n.els {
                 gen(buf, n)?;
-            } else {
-                writeln!(buf, "  push a0")?; // for when n.then is not excuted
             }
             writeln!(buf, "end{}:", n.label)?;
         }
