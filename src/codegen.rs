@@ -18,9 +18,15 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
                 writeln!(buf, "  push ra")?;
                 writeln!(buf, "  push fp")?;
                 writeln!(buf, "  rsp fp")?;
-                writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
-                writeln!(buf, "  lih t1, 0x{:04x}@h", func.local_offset)?;
-                writeln!(buf, "  or t0, t1")?;
+                if func.local_offset <= 31 {
+                    writeln!(buf, "  addi t0, zero, {}", func.local_offset)?;
+                } else if func.local_offset <= 255 {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
+                } else {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
+                    writeln!(buf, "  lih t1, 0x{:04x}@h", func.local_offset)?;
+                    writeln!(buf, "  or t0, t1")?;
+                }
                 writeln!(buf, "  mov t1, fp")?;
                 writeln!(buf, "  sub t1, t0")?;
                 writeln!(buf, "  wsp t1")?;
@@ -53,9 +59,15 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
                 writeln!(buf, "  push ra")?;
                 writeln!(buf, "  push fp")?;
                 writeln!(buf, "  rsp fp")?;
-                writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
-                writeln!(buf, "  lih t1, 0x{:04x}@h", func.local_offset)?;
-                writeln!(buf, "  or t0, t1")?;
+                if func.local_offset <= 31 {
+                    writeln!(buf, "  addi t0, zero, {}", func.local_offset)?;
+                } else if func.local_offset <= 255 {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
+                } else {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
+                    writeln!(buf, "  lih t1, 0x{:04x}@h", func.local_offset)?;
+                    writeln!(buf, "  or t0, t1")?;
+                }
                 writeln!(buf, "  mov t1, fp")?;
                 writeln!(buf, "  sub t1, t0")?;
                 writeln!(buf, "  wsp t1")?;
@@ -82,9 +94,15 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
                 writeln!(buf, "  push ra")?;
                 writeln!(buf, "  push fp")?;
                 writeln!(buf, "  rsp fp")?;
-                writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
-                writeln!(buf, "  lih t1, 0x{:04x}@h", func.local_offset)?;
-                writeln!(buf, "  or t0, t1")?;
+                if func.local_offset <= 31 {
+                    writeln!(buf, "  addi t0, zero, {}", func.local_offset)?;
+                } else if func.local_offset <= 255 {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
+                } else {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", func.local_offset)?;
+                    writeln!(buf, "  lih t1, 0x{:04x}@h", func.local_offset)?;
+                    writeln!(buf, "  or t0, t1")?;
+                }
                 writeln!(buf, "  mov t1, fp")?;
                 writeln!(buf, "  sub t1, t0")?;
                 writeln!(buf, "  wsp t1")?;
@@ -136,9 +154,15 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
 fn gen(buf: &mut String, node: &Node) -> Result<()> {
     match &node.kind {
         NodeKind::Num(n) => {
-            writeln!(buf, "  lil a0, 0x{:04x}@l", n.val)?;
-            writeln!(buf, "  lih a1, 0x{:04x}@h", n.val)?;
-            writeln!(buf, "  or a0, a1")?;
+            if n.val <= 31 {
+                writeln!(buf, "  addi a0, zero, {}", n.val)?;
+            } else if n.val <= 255 {
+                writeln!(buf, "  lil a0, 0x{:04x}@l", n.val)?;
+            } else {
+                writeln!(buf, "  lil a0, 0x{:04x}@l", n.val)?;
+                writeln!(buf, "  lih a1, 0x{:04x}@h", n.val)?;
+                writeln!(buf, "  or a0, a1")?;
+            }
             writeln!(buf, "  push a0")?;
         }
 
@@ -484,17 +508,31 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
         NodeKind::PtrAdd(n) => {
             gen(buf, &n.left)?;
             gen(buf, &n.right)?;
-            writeln!(
-                buf,
-                "  lil a0, 0x{:04x}@l",
-                node.ty.clone().unwrap().ptr_to.unwrap().size
-            )?;
-            writeln!(
-                buf,
-                "  lih a1, 0x{:04x}@h",
-                node.ty.clone().unwrap().ptr_to.unwrap().size
-            )?;
-            writeln!(buf, "  or a0, a1")?;
+            if node.ty.clone().unwrap().ptr_to.unwrap().size <= 31 {
+                writeln!(
+                    buf,
+                    "  addi a0, zero, {}",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+            } else if node.ty.clone().unwrap().ptr_to.unwrap().size <= 255 {
+                writeln!(
+                    buf,
+                    "  lil a0, 0x{:04x}@l",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+            } else {
+                writeln!(
+                    buf,
+                    "  lil a0, 0x{:04x}@l",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+                writeln!(
+                    buf,
+                    "  lih a1, 0x{:04x}@h",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+                writeln!(buf, "  or a0, a1")?;
+            }
             writeln!(buf, "  push a0")?;
             writeln!(buf, "  pop a1")?;
             writeln!(buf, "  pop a0")?;
@@ -512,17 +550,31 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
         NodeKind::PtrSub(n) => {
             gen(buf, &n.left)?;
             gen(buf, &n.right)?;
-            writeln!(
-                buf,
-                "  lil a0, 0x{:04x}@l",
-                node.ty.clone().unwrap().ptr_to.unwrap().size
-            )?;
-            writeln!(
-                buf,
-                "  lih a1, 0x{:04x}@h",
-                node.ty.clone().unwrap().ptr_to.unwrap().size
-            )?;
-            writeln!(buf, "  or a0, a1")?;
+            if node.ty.clone().unwrap().ptr_to.unwrap().size <= 31 {
+                writeln!(
+                    buf,
+                    "  addi a0, zero, {}",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+            } else if node.ty.clone().unwrap().ptr_to.unwrap().size <= 255 {
+                writeln!(
+                    buf,
+                    "  lil a0, 0x{:04x}@l",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+            } else {
+                writeln!(
+                    buf,
+                    "  lil a0, 0x{:04x}@l",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+                writeln!(
+                    buf,
+                    "  lih a1, 0x{:04x}@h",
+                    node.ty.clone().unwrap().ptr_to.unwrap().size
+                )?;
+                writeln!(buf, "  or a0, a1")?;
+            }
             writeln!(buf, "  push a0")?;
             writeln!(buf, "  pop a1")?;
             writeln!(buf, "  pop a0")?;
@@ -556,10 +608,17 @@ fn gen_lval(buf: &mut String, node: &Node) -> Result<()> {
                 writeln!(buf, "  push a0")?;
             } else {
                 writeln!(buf, "  mov a0, fp")?;
-                writeln!(buf, "  lil t0, 0x{:04x}@l", n.offset)?;
-                writeln!(buf, "  lih t1, 0x{:04x}@h", n.offset)?;
-                writeln!(buf, "  or t0, t1")?;
-                writeln!(buf, "  sub a0, t0")?;
+                if n.offset <= 31 {
+                    writeln!(buf, "  subi a0, a0, {}", n.offset)?;
+                } else if n.offset <= 255 {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", n.offset)?;
+                    writeln!(buf, "  sub a0, t0")?;
+                } else {
+                    writeln!(buf, "  lil t0, 0x{:04x}@l", n.offset)?;
+                    writeln!(buf, "  lih t1, 0x{:04x}@h", n.offset)?;
+                    writeln!(buf, "  or t0, t1")?;
+                    writeln!(buf, "  sub a0, t0")?;
+                }
                 writeln!(buf, "  push a0")?;
             }
         }
@@ -568,11 +627,19 @@ fn gen_lval(buf: &mut String, node: &Node) -> Result<()> {
         }
         NodeKind::MemAccess(n) => {
             gen_lval(buf, &n.unary)?;
-            writeln!(buf, "  lil t0, 0x{:04x}@l", n.member.offset)?;
-            writeln!(buf, "  lih t1, 0x{:04x}@h", n.member.offset)?;
-            writeln!(buf, "  or t0, t1")?;
             writeln!(buf, "  pop a0")?;
-            writeln!(buf, "  add a0, t0")?;
+            if n.member.offset <= 31 {
+                writeln!(buf, "  addi a0, a0, {}", n.member.offset)?;
+            } else if n.member.offset <= 255 {
+                writeln!(buf, "  lil t0, 0x{:04x}@l", n.member.offset)?;
+                writeln!(buf, "  or t0, t1")?;
+                writeln!(buf, "  add a0, t0")?;
+            } else {
+                writeln!(buf, "  lil t0, 0x{:04x}@l", n.member.offset)?;
+                writeln!(buf, "  lih t1, 0x{:04x}@h", n.member.offset)?;
+                writeln!(buf, "  or t0, t1")?;
+                writeln!(buf, "  add a0, t0")?;
+            }
             writeln!(buf, "  push a0")?;
         }
         NodeKind::FuncCall(n) => {
