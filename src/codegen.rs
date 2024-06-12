@@ -393,7 +393,7 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             } else {
                 writeln!(buf, "  sw a1, a0, 0")?;
             }
-            writeln!(buf, "  push a1")?;
+            // writeln!(buf, "  push a1")?;
         }
         NodeKind::If(n) => {
             gen(buf, &n.cond)?;

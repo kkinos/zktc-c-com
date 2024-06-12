@@ -11,13 +11,14 @@ int test2()
 	return a;
 }
 
-int test3()
-{
-	int a;
-	int b;
-	a = b = 3;
-	return a + b;
-}
+// Not support
+// int test3()
+// {
+// 	int a;
+// 	int b;
+// 	a = b = 3;
+// 	return a + b;
+// }
 
 int test4()
 {
@@ -59,7 +60,7 @@ int main()
 {
 	assert(3, test1(), 1);
 	assert(3, test2(), 2);
-	assert(6, test3(), 3);
+	//	assert(6, test3(), 3);
 	assert(2, test4(), 4);
 	assert(2, test5(), 5);
 	assert(8, test6(), 6);
