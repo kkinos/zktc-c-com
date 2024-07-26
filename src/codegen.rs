@@ -376,7 +376,7 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             if node.ty.clone().unwrap().kind != TypeKind::Array {
                 writeln!(buf, "  pop a0")?;
                 if node.ty.clone().unwrap().kind == TypeKind::Char {
-                    writeln!(buf, "  lh a0, a0, 0")?;
+                    writeln!(buf, "  lhu a0, a0, 0")?;
                 } else {
                     writeln!(buf, "  lw a0, a0, 0")?;
                 }
@@ -498,7 +498,7 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
                 if node.ty.clone().unwrap().kind == TypeKind::Func {
                     writeln!(buf, "  jalr ra, a0, 0")?;
                 } else if node.ty.clone().unwrap().kind == TypeKind::Char {
-                    writeln!(buf, "  lh a0, a0, 0")?;
+                    writeln!(buf, "  lhu a0, a0, 0")?;
                 } else {
                     writeln!(buf, "  lw a0, a0, 0")?;
                 }
