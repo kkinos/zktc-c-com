@@ -107,11 +107,15 @@ pub fn codegen(buf: &mut String, program: &Program) -> Result<()> {
                 writeln!(buf, "  sub t1, t0")?;
                 writeln!(buf, "  wsp t1")?;
             }
+
+            let mut arg_offset = 0;
             for (i, arg) in func.args.iter().enumerate() {
                 if arg.ty.clone().unwrap().kind == TypeKind::Char {
-                    writeln!(buf, "  sh a{}, fp, {}", i, -((i as i8) + 1))?;
+                    arg_offset += 1;
+                    writeln!(buf, "  sh a{}, fp, -{}", i, arg_offset)?;
                 } else {
-                    writeln!(buf, "  sw a{}, fp, {}", i, -2 * ((i as i8) + 1))?;
+                    arg_offset += 2;
+                    writeln!(buf, "  sw a{}, fp, -{}", i, arg_offset)?;
                 }
             }
 
