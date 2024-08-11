@@ -42,3 +42,11 @@ zktc-asm asm/arith_test5.asm -o mem/arith_test5.mem -b 0xb000
 echo "=== arith test5 ==="
 
 check mem/arith_test5.mem
+
+cargo run -- zktc-c/assert.zktc.c zktc-c/arith_test6.zktc.c  -o asm/arith_test6.asm
+zktc-asm asm/arith_test6.asm -o mem/arith_test6.mem -b 0xb000
+
+
+echo "=== arith test6 ==="
+
+check mem/arith_test6.mem
