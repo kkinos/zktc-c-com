@@ -277,12 +277,55 @@ fn gen(buf: &mut String, node: &Node) -> Result<()> {
             gen(buf, &n.right)?;
             writeln!(buf, "  pop a1")?;
             writeln!(buf, "  pop a0")?;
-            writeln!(buf, "  mov t0, zero")?;
-            writeln!(buf, "  blt a0, a1, 8")?;
-            writeln!(buf, "  addi t0, t0, 1")?;
-            writeln!(buf, "  sub a0, a1")?;
-            writeln!(buf, "  jal zero, -6")?;
+
+            // abs a0
+            writeln!(buf, "  mov t0, a0")?;
+            writeln!(buf, "  lil t1, 0x000f@l")?;
+            writeln!(buf, "  sra t0, t1")?;
+            writeln!(buf, "  push t0")?;
+            writeln!(buf, "  xor t0, a0")?;
+            writeln!(buf, "  pop t1")?;
+            writeln!(buf, "  sub t0, t1")?;
+            writeln!(buf, "  push t0")?;
+
+            // abs a1
+            writeln!(buf, "  mov t0, a1")?;
+            writeln!(buf, "  lil t1, 0x000f@l")?;
+            writeln!(buf, "  sra t0, t1")?;
+            writeln!(buf, "  push t0")?;
+            writeln!(buf, "  xor t0, a1")?;
+            writeln!(buf, "  pop t1")?;
+            writeln!(buf, "  sub t0, t1")?;
+            writeln!(buf, "  push t0")?;
+
+            // t1 = abs a1
+            // t0 = abs a0
+            writeln!(buf, "  pop t1")?;
+            writeln!(buf, "  pop t0")?;
+
             writeln!(buf, "  push a0")?;
+            writeln!(buf, "  push a1")?;
+
+            // t0 = abs(a0) % abs(a1)
+            writeln!(buf, "  mov a0, zero")?;
+            writeln!(buf, "  mov a1, zero")?;
+            writeln!(buf, "  add a0, t1")?;
+            writeln!(buf, "  bltu t0, a0, 6")?;
+            writeln!(buf, "  add a1, t1")?;
+            writeln!(buf, "  jal zero, -6")?;
+            writeln!(buf, "  sub t0, a1")?;
+
+            writeln!(buf, "  pop a1")?;
+            writeln!(buf, "  pop a0")?;
+
+            // // if a0 < 0 && a1 < 0 or a0 > 0 && a1 > 0
+            writeln!(buf, "  xor a0, a1")?;
+            writeln!(buf, "  lil t1, 0x000f@l")?;
+            writeln!(buf, "  sra a0, t1")?;
+            writeln!(buf, "  xor t0, a0")?;
+            writeln!(buf, "  srl a0, t1")?;
+            writeln!(buf, "  add t0, a0")?;
+            writeln!(buf, "  push t0")?;
         }
         NodeKind::Not(n) => {
             gen(buf, &n.unary)?;
